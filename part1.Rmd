@@ -3,35 +3,85 @@ title: "part1"
 output: pdf_document
 ---
 
-Download file `gene_experession.tsv` from github
+### Question 1
+
+Download file `gene_experession.tsv` from github, read file csv, make row name is column one and print first 6 genes.
 
 ```{r}
 download.file("https://github.com/markziemann/SLE712_files/raw/master/bioinfo_asst3_part1_files/gene_expression.tsv", "gene_expression.tsv")
 df <- read.csv('gene_expression.tsv', sep='\t', stringsAsFactors = FALSE, row.names = 1)
-print(head(df))
-print(str(df))
+head(df, 6)
 ```
+
+Try to access a gene by gene name.
 
 ```{r}
-print(str(df))
+df['ENSG00000223972', ]
 ```
 
-## R Markdown
+Make a new column is mean of other columns
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+df$mean <- rowMeans(df[, 1:2])
+head(df)
 ```
 
-## Including Plots
+### Question 3
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+Create sorted dataframe by mean column order
+```{r}
+sorted_df <- df[order(df$mean), ]
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Show top 10-highest mean genes
+```{r}
+top10genes <- row.names(tail(sorted_df, 10))
+top10genes
+```
+
+### Question 4
+Take mean column after compare this column with 10 (<10). The resutl will be a list of boolean array. Number of genes with mean lower than 10 is sum of this list.
+
+```{r}
+number_genes <- sum(df$mean < 10)
+number_genes
+```
+
+### Question 5
+```{r}
+hist(df$mean, xlab='mean of gene')
+```
+
+
+### Question 6
+Download growth data from github and load it into a dataframe
+
+```{r}
+download.file("https://github.com/markziemann/SLE712_files/raw/master/bioinfo_asst3_part1_files/growth_data.csv", "growth_data.csv")
+df <- read.csv('growth_data.csv')
+head(df)
+```
+Print column names of dataframe
+
+```{r}
+colnames(df)
+```
+Mean and standard deviation at 2004 (start)
+
+```{r echo=T}
+mean_2004 <- mean(df$Circumf_2004_cm)
+cat('Mean at 2004: ', mean_2004)
+cat('\n')
+sd_2004 <- sd(df$Circumf_2004_cm)
+cat('SD at 2004: ', sd_2004)
+```
+
+Mean and standard deviation at 2019 (end)
+```{r}
+mean_2019 <- mean(df$Circumf_2019_cm)
+cat('Mean at 2019: ', mean_2019)
+cat('\n')
+sd_2019 <- sd(df$Circumf_2019_cm)
+cat('SD at 2019: ', sd_2019)
+```
+
