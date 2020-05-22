@@ -1,6 +1,9 @@
 ---
 title: "part1"
-output: pdf_document
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
 ---
 
 ### Question 1
@@ -85,3 +88,33 @@ sd_2019 <- sd(df$Circumf_2019_cm)
 cat('SD at 2019: ', sd_2019)
 ```
 
+
+```{r}
+boxplot(df$Circumf_2004_cm, df$Circumf_2019_cm, 
+	names=c("Circumf_2004_cm", "Circumf_2019_cm"))
+```
+
+
+```{r}
+df$growth <- df$Circumf_2019_cm - df$Circumf_2009_cm
+north_growth <- df[df$Site=="northeast", ]$growth
+south_growth <- df[df$Site=="southwest", ]$growth
+mean_northeast <- mean(north_growth)
+mean_southwest <- mean(south_growth)
+
+cat("Mean growth of Northeast over the past  10 years: ", mean_northeast, '\n')
+cat("Mean growth of Southwest over the past  10 years: ", mean_southwest)
+
+
+```
+
+```{r}
+
+t_test_res <- t.test(north_growth, south_growth)
+t_test_pvalue <- t_test_res$p.value
+wilcox_test_res <- wilcox.test(north_growth, south_growth)
+wilcox_pvalue <- wilcox_test_res$p.value
+
+cat('p value of t.test: ', t_test_pvalue, '\n')
+cat('p value of wilcox.test: ', wilcox_pvalue)
+```
