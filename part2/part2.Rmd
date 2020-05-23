@@ -1,0 +1,42 @@
+---
+title: "part2.Rmd"
+output: pdf_document
+
+---
+```{r}
+library(rBLAST)
+library(Biostrings)
+library(seqinr)
+source('mutblast_functions.R')
+```
+
+Download the whole E.coli set. 
+```{r}
+download.file("ftp://ftp.ensemblgenomes.org/pub/bacteria/release-42/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/cds/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz", "Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz")
+
+# uncompress the file
+R.utils::gunzip("Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz", overwrite=TRUE)
+
+```
+
+Used makeblastdb and blast function from rBLAST library to make database. And then we got the number of sequences is 4,140 sequences
+```{r}
+makeblastdb("Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa", dbtype="nucl", "-parse_seqids")
+db <- blast(db='Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa')
+db
+```
+
+
+Download sample.fa from GitHub. Use BioString to read sequence after that we use width function to get length of squence. To calcutate GC proportion we use GC function from seqinr library. We got length of sequence is 273 and GC proportion is 0.4908425
+
+```{r}
+download.file("https://raw.githubusercontent.com/markziemann/SLE712_files/master/bioinfo_asst3_part2_files/sample.fa", destfile ="sample.fa")
+all_sequences <- Biostrings:::readBStringSet('sample.fa') # read all sequences
+seq <- all_sequences[13] # get my sequence
+length_seq <- width(seq)
+cat('Length of sequence: ', length_seq, '\n')
+seq_char <- seqinr::s2c(toString(seq)) # convert BStringSet to vector of single characters
+gc_proportion <- seqinr::GC(seq_char) # calculate GC proportion
+cat('GC Proportion: ', gc_proportion)
+```
+
