@@ -1,7 +1,6 @@
 ---
 title: "part2.Rmd"
 output: pdf_document
-
 ---
 ```{r}
 library(rBLAST)
@@ -22,6 +21,7 @@ R.utils::gunzip("Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz"
 Used makeblastdb and blast function from rBLAST library to make database. And then we got the number of sequences is 4,140 sequences
 ```{r}
 makeblastdb("Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa", dbtype="nucl", "-parse_seqids")
+
 db <- blast(db='Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa')
 db
 ```
@@ -39,4 +39,69 @@ seq_char <- seqinr::s2c(toString(seq)) # convert BStringSet to vector of single 
 gc_proportion <- seqinr::GC(seq_char) # calculate GC proportion
 cat('GC Proportion: ', gc_proportion)
 ```
+#### Question 3
+We used provided myblastn_tab function to  `create database` and `search` sequence in database. We only got two significants matching.
+
+```{r}
+pred <- myblastn_tab(toString(seq), 'Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa')
+head(pred, 3)
+```
+
+
+
+
+```{r}
+seq_char <- seqinr::s2c(toString(seq)) # Create vector of single character from BioString
+mut_seq <- mutator(seq_char, 15) # try to create a mutation sequence from originial sequence, in this case we tried to make 100 mutate positions
+
+compare <- seq_char == mut_seq # try to compare original sequence and mutate sequence
+mutate <- which(compare == FALSE) # mutate positions
+num_mutate <- length(mutate) # number of mutate positions
+num_mutate
+```
+
+```{r}
+lst_mut_num <- seq(1, length(seq_char))
+
+matching <- function(nmut) {
+  db_path <- 'Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa'
+  mut_seq_char <- mutator(seq_char, nmut)
+  mut_seq <- seqinr::c2s(mut_seq_char)
+  match_table <- (myblastn_tab(mut_seq, db_path))
+  num_match <- dim(match_table)[1]
+  if (is.null(num_match)) {
+    return(0)
+  }else{
+    return(num_match)
+  }
+}
+
+result <- unlist(lapply(lst_mut_num, matching))
+
+is_match <- result > 0
+
+lst_propotion <- rep(0, length(result))
+
+interval <- 10
+n_interval <- as.integer(length(result) / interval)
+for (i in 1:n_interval) {
+  first <- (i-1)*interval + 1
+  if (i==n_interval) {
+    last <- length(result)
+  } else {
+    last <- i*interval
+  }
+  print(first)
+  print(last)
+  print("==================")
+  sum <- sum(is_match[first:last])
+  lst_propotion[first:last] <- sum / interval
+  
+}
+
+
+#plot(lst_mut_num, lst_propotion, type='l')
+
+```
+
 
