@@ -1,107 +1,150 @@
 ---
-title: "part2.Rmd"
+title: "Part 2: Test the limits of BLAST"
+author: "Thi Tran"
+date: "5/31/2020"
 output: pdf_document
 ---
 ```{r}
+# loading library
 library(rBLAST)
 library(Biostrings)
 library(seqinr)
-source('mutblast_functions.R')
+source("https://raw.githubusercontent.com/markziemann/SLE712_files/master/bioinfo_asst3_part2_files/mutblast_functions.R")
 ```
 
-Download the whole E.coli set. 
+### Question 1: 
+The whole set of E.coli is downloaded by command ```download.file```, uncompressed by ```gunzip```, and creating a blast database by ```makeblastdb()``` function. There are 4,140 sequences present in the E.coli set. 
+
 ```{r}
+# download the whole E.coli sequences
 download.file("ftp://ftp.ensemblgenomes.org/pub/bacteria/release-42/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/cds/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz", "Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz")
 
 # uncompress the file
 R.utils::gunzip("Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz", overwrite=TRUE)
 
-```
-
-Used makeblastdb and blast function from rBLAST library to make database. And then we got the number of sequences is 4,140 sequences
-```{r}
+# create the blast database
 makeblastdb("Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa", dbtype="nucl", "-parse_seqids")
-
-db <- blast(db='Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa')
-db
 ```
 
-
-Download sample.fa from GitHub. Use BioString to read sequence after that we use width function to get length of squence. To calcutate GC proportion we use GC function from seqinr library. We got length of sequence is 273 and GC proportion is 0.4908425
-
-```{r}
-download.file("https://raw.githubusercontent.com/markziemann/SLE712_files/master/bioinfo_asst3_part2_files/sample.fa", destfile ="sample.fa")
-all_sequences <- Biostrings:::readBStringSet('sample.fa') # read all sequences
-seq <- all_sequences[13] # get my sequence
-length_seq <- width(seq)
-cat('Length of sequence: ', length_seq, '\n')
-seq_char <- seqinr::s2c(toString(seq)) # convert BStringSet to vector of single characters
-gc_proportion <- seqinr::GC(seq_char) # calculate GC proportion
-cat('GC Proportion: ', gc_proportion)
-```
-#### Question 3
-We used provided myblastn_tab function to  `create database` and `search` sequence in database. We only got two significants matching.
+### Question 2: 
+The sample fasta sequences are downloaded by ```download.file```, read in by ```read.fasta```. My interest sequence is 13th sequence. ```getLength()``` and ```GC()``` function from ```sequinr``` library are used to get the length and the proportion of GC bases of my interest sequence. The length of this sequence is 273 bp and the GC proportion is 0.4908425. 
 
 ```{r}
-pred <- myblastn_tab(toString(seq), 'Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa')
-head(pred, 3)
-```
+# download sample fasta sequences
+download.file("https://raw.githubusercontent.com/markziemann/SLE712_files/master/bioinfo_asst3_part2_files/sample.fa", destfile ="sample.fa") # download sample.fa file
 
+# read all sequences from fa file
+all_sequences <-  seqinr::read.fasta("sample.fa") 
 
+# my id is 13, get sequences 13-th
+my_seq <- all_sequences[[13]] 
 
+# get sequence length and calculate the GC content
+length_seq <- seqinr::getLength(my_seq)
+gc_proprotion <- seqinr::GC(my_seq)
 
-```{r}
-seq_char <- seqinr::s2c(toString(seq)) # Create vector of single character from BioString
-mut_seq <- mutator(seq_char, 15) # try to create a mutation sequence from originial sequence, in this case we tried to make 100 mutate positions
-
-compare <- seq_char == mut_seq # try to compare original sequence and mutate sequence
-mutate <- which(compare == FALSE) # mutate positions
-num_mutate <- length(mutate) # number of mutate positions
-num_mutate
+#show the results
+cat("Sequence length: ", length_seq, '\n')
+cat("GC Proportion: ", gc_proprotion)
 ```
 
-```{r}
-lst_mut_num <- seq(1, length(seq_char))
+### Question 3
+```myblastn_tab()``` function is used to perform blast search on the whole E.coli sequence database. There are only two sequences that matches my sequence best. The first hit is my sequence itself and the second is a similar sequence. 
 
+```{r}
+# blast search for 13-th sequence
+res <- myblastn_tab(myseq = my_seq, db = "Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa")
+
+# top 3 hits including percent indentify, E-value and bit scores
+head(res, 3)[,c("qseqid", "sseqid", "pident", "evalue","bitscore")]
+```
+
+### Question 4:
+Using ```mutator()``` function to create mutated sequence with 20 point mutations and then compare with the original sequence by making a pairwise alignment by ```pairwiseAlignment``` from ```Biostrings ``` library. The number of mismatch determined by ```nmismatch()``` function is 16.
+
+
+```{r}
+
+# read my sequence under Biostring format
+my_seq_new <- Biostrings::readDNAStringSet('sample.fa')[13]
+
+# extract as a simple string
+my_seq_str <- toString(my_seq_new) 
+
+# convert string to a vector of characters
+my_seq_char <- seqinr::s2c(my_seq_str) 
+
+# create a mutated copy with 20 substitutions
+my_seq_char_mut <- mutator(myseq=my_seq_char, 20)
+
+## now create a pairwise alignment
+
+# create DNAString format from mutation sequence
+my_seq_mut <- DNAString(c2s(my_seq_char_mut)) 
+aln <- Biostrings::pairwiseAlignment(my_seq_new, my_seq_mut)
+
+# get the number of mismatch
+num_mismatch <- nmismatch(aln)
+
+# show the result
+cat("Number of mismatches between the original and mutated sequence: ", num_mismatch)
+
+```
+
+### Question 5:
+Create a function ```matching()``` to make a n-point mutation sequence, run blast search and return result whether it identify matched sequences or not as a 0 or 1. Using ```for``` loop to run ```matching()``` for sequence having 1-273(the length of my interest sequence) point mutations, repeat 100 times for each sequence to get reliable results. Blast search reaches the limit when the number of sites need to be altered is 94, and the proportion of sites need to be altered is 0.3443223.
+
+```{r}
+# create function for blast search of a mutated sequence
 matching <- function(nmut) {
   db_path <- 'Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa'
-  mut_seq_char <- mutator(seq_char, nmut)
+  # create mutated sequence
+  mut_seq_char <- mutator(my_seq_char, nmut)
+  # convert to a vector of characters
   mut_seq <- seqinr::c2s(mut_seq_char)
+  # create a table of blast search
   match_table <- (myblastn_tab(mut_seq, db_path))
+  # check whether this table is null or not
   num_match <- dim(match_table)[1]
   if (is.null(num_match)) {
     return(0)
   }else{
-    return(num_match)
+    return(1)
   }
 }
+# calculate probability of finding a matched sequence for mutated sequences with the number of point mutation from 1 to 273
 
-result <- unlist(lapply(lst_mut_num, matching))
-
-is_match <- result > 0
-
-lst_propotion <- rep(0, length(result))
-
-interval <- 10
-n_interval <- as.integer(length(result) / interval)
-for (i in 1:n_interval) {
-  first <- (i-1)*interval + 1
-  if (i==n_interval) {
-    last <- length(result)
-  } else {
-    last <- i*interval
-  }
-  print(first)
-  print(last)
-  print("==================")
-  sum <- sum(is_match[first:last])
-  lst_propotion[first:last] <- sum / interval
-  
+probs <- c()
+for (nmut in 1:length_seq) {
+  prob <- mean(replicate(100, matching(nmut)))
+  probs[nmut] <- prob
 }
 
+number_mutation <- seq(1:length_seq)
 
-#plot(lst_mut_num, lst_propotion, type='l')
+# get the first position that matching probability is zero
+nmut_prevent_search <- which(probs == 0)[1]
+
+# show the results
+cat("the number of mutation that prevent BLAST search from matching: ", nmut_prevent_search)
+cat("the proprotion of mutation that prevent BLAST search from matching: ", nmut_prevent_search / length_seq)
 
 ```
 
+```{r}
+plot(number_mutation, probs, type='l', main = "How number of site affects BLAST performance", 
+     ylab = "proportion of success", xlab = "number of site randomised")
+```
 
+
+### Question 6:
+Using ```plot``` to show the results. From the chart, the matching ability of blast decrease gradually from 100% to 0% with the proportion of sites from 10% to 40%. The ability for blast to match the gene of origin is 50% when the proportion of mutated sites at about 20%. 
+
+```{r}
+# calculaete matching probability following the proportion of altered sites
+propotion_plot <- number_mutation / length_seq
+
+# show the chart
+plot(propotion_plot, probs, type='l', main = "How proportion of site affects BLAST performance", 
+     ylab = "proportion of success", xlab = "proportion of site randomised")
+```
